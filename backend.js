@@ -160,5 +160,84 @@ const LocalBackend = {
   },
 };
 
-/* ── Сонголт ────────────────────────────────────────────── */
-const Backend = USING_SUPABASE ? SupabaseBackend : LocalBackend;
+/* ── Өөрийн Node.js + PostgreSQL сервер (REST API) ──────── */
+const ApiBackend = {
+  mode: 'api',
+  _profile: null,
+  _token() { return localStorage.getItem('krypt_token'); },
+
+  async _fetch(path, opts = {}) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    const t = this._token();
+    if (t) headers['Authorization'] = 'Bearer ' + t;
+    let res;
+    try {
+      res = await fetch(API_BASE_URL + path, { ...opts, headers });
+    } catch (e) {
+      throw new Error('Серверт холбогдсонгүй. Сервер ажиллаж байгаа эсэх, API_BASE_URL зөв эсэхийг шалгана уу.');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('Алдаа ' + res.status));
+    return data;
+  },
+
+  async register({ email, password, full_name, phone, company }) {
+    const d = await this._fetch('/auth/register', {
+      method: 'POST', body: JSON.stringify({ email, password, full_name, phone, company })
+    });
+    localStorage.setItem('krypt_token', d.token);
+    this._profile = d.user;
+    return { needsConfirm: false, user: d.user };
+  },
+
+  async login({ email, password }) {
+    const d = await this._fetch('/auth/login', {
+      method: 'POST', body: JSON.stringify({ email, password })
+    });
+    localStorage.setItem('krypt_token', d.token);
+    this._profile = d.user;
+  },
+
+  async logout() { localStorage.removeItem('krypt_token'); this._profile = null; },
+
+  async currentUser() {
+    if (!this._token()) return null;
+    try {
+      const d = await this._fetch('/auth/me');
+      this._profile = d.user;
+      return { id: d.user.id, email: d.user.email };
+    } catch {
+      localStorage.removeItem('krypt_token');
+      return null;
+    }
+  },
+
+  async profile() {
+    if (this._profile) return this._profile;
+    const d = await this._fetch('/auth/me');
+    this._profile = d.user;
+    return d.user;
+  },
+
+  async orders({ all }) {
+    const d = await this._fetch('/orders' + (all ? '?all=1' : ''));
+    return d.orders || [];
+  },
+
+  async createOrder(payload) {
+    await this._fetch('/orders', { method: 'POST', body: JSON.stringify(payload) });
+  },
+
+  async updateStatus(id, status) {
+    await this._fetch('/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+  },
+
+  onChange(cb) {
+    // Энгийн polling — 8 секунд тутамд шинэчилнэ
+    setInterval(cb, 8000);
+  },
+};
+
+/* ── Сонголт (дараалал: API → Supabase → demo) ──────────── */
+const API_ON = (typeof API_READY !== 'undefined') && API_READY;
+const Backend = API_ON ? ApiBackend : (USING_SUPABASE ? SupabaseBackend : LocalBackend);

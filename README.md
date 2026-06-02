@@ -10,13 +10,38 @@
 | `login.html` | Нэвтрэх / бүртгүүлэх хуудас |
 | `dashboard.html` | Хэрэглэгчийн портал + админ удирдлага |
 | `portal.css` | login/dashboard-ийн хуваалцсан загвар |
-| `supabase-config.js` | Supabase холболтын тохиргоо ← **ЭНД ТҮЛХҮҮРЭЭ ОРУУЛНА** |
-| `schema.sql` | Өгөгдлийн сангийн бүтэц (Supabase дээр нэг удаа Run хийнэ) |
+| `backend.js` | Backend абстракц (API / Supabase / demo автоматаар сонгоно) |
+| `supabase-config.js` | **Backend тохиргоо** (API хаяг эсвэл Supabase түлхүүр) |
+| `server/` | **Node.js + PostgreSQL backend сервер** |
+| `schema.sql` | Supabase ашиглах тохиолдлын бүтэц (заавал биш) |
 | `krypt-logo.png` | Брэндийн лого |
 
 ---
 
-## ⚙️ Supabase тохируулах (нэг удаагийн, ~5 минут)
+## 🔧 Backend сонголт
+
+`supabase-config.js` доторх утгаас хамаарч **3 горим** автоматаар сонгогдоно:
+
+1. **Өөрийн PostgreSQL сервер** — `API_BASE_URL` тохируулсан бол (← **одоогийн сонголт**). `server/README.md`-г үзнэ үү.
+2. **Supabase** — Supabase түлхүүр тохируулсан, API_BASE_URL хоосон бол.
+3. **Demo (localStorage)** — аль нь ч тохируулаагүй бол. Тохиргоо хэрэггүй, гэхдээ өгөгдөл зөвхөн тухайн хөтөч дээр.
+
+### → PostgreSQL сервер тохируулах
+Бүрэн заавар: **[`server/README.md`](server/README.md)**. Товчхондоо:
+```bash
+cd server
+npm install
+cp .env.example .env     # DATABASE_URL, JWT_SECRET тааруул
+npm run init-db          # хүснэгт үүсгэх
+npm start                # → http://localhost:4000/api
+```
+Дараа нь сайтаар бүртгүүл (анхны хэрэглэгч = админ).
+
+---
+
+## ⚙️ (Нөөц хувилбар) Supabase тохируулах (~5 минут)
+
+> Зөвхөн PostgreSQL серверийн оронд Supabase ашиглах бол. `API_BASE_URL`-г хоосон болгоно.
 
 ### 1. Project үүсгэх
 1. [supabase.com](https://supabase.com) → бүртгүүлэх (үнэгүй).
