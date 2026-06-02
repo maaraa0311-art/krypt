@@ -127,14 +127,17 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="backend.js"></script>
   <script>
-    if (!SUPABASE_READY) document.getElementById('configWarn').style.display = 'flex';
+    if (Backend.mode === 'local') {
+      document.getElementById('authSub').insertAdjacentHTML('afterend',
+        '<p style="font-family:var(--font-mono);font-size:11px;color:var(--dim);margin-top:8px">Demo горим · өгөгдөл энэ хөтөч дээр хадгалагдана</p>');
+    }
 
     // Хэрэв аль хэдийн нэвтэрсэн бол dashboard руу
     (async () => {
-      if (!sb) return;
-      const { data } = await sb.auth.getSession();
-      if (data.session) window.location.href = 'dashboard.html';
+      const u = await Backend.currentUser();
+      if (u) window.location.href = 'dashboard.html';
     })();
 
     function switchTab(tab) {
@@ -167,24 +170,22 @@
 
     async function doLogin(e) {
       e.preventDefault();
-      if (!sb) return;
       const btn = document.getElementById('loginBtn');
       btn.disabled = true; btn.textContent = 'Нэвтэрч байна...';
       hideMsg();
       const email = document.getElementById('li-email').value.trim();
       const password = document.getElementById('li-pass').value;
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) {
-        showMsg(translateErr(error.message), 'err');
+      try {
+        await Backend.login({ email, password });
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showMsg(translateErr(err.message), 'err');
         btn.disabled = false; btn.textContent = 'Нэвтрэх';
-        return;
       }
-      window.location.href = 'dashboard.html';
     }
 
     async function doRegister(e) {
       e.preventDefault();
-      if (!sb) return;
       const btn = document.getElementById('registerBtn');
       btn.disabled = true; btn.textContent = 'Бүртгэж байна...';
       hideMsg();
@@ -194,25 +195,18 @@
       const email     = document.getElementById('re-email').value.trim();
       const password  = document.getElementById('re-pass').value;
 
-      const { data, error } = await sb.auth.signUp({
-        email, password,
-        options: { data: { full_name, phone, company } }
-      });
-
-      if (error) {
-        showMsg(translateErr(error.message), 'err');
+      try {
+        const res = await Backend.register({ full_name, phone, company, email, password });
+        if (res.needsConfirm) {
+          showMsg('Бүртгэл амжилттай! Имэйл хаягаа шалгаж баталгаажуулсны дараа нэвтэрнэ үү.', 'ok');
+          btn.disabled = false; btn.textContent = 'Бүртгүүлэх';
+          setTimeout(() => switchTab('login'), 2500);
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      } catch (err) {
+        showMsg(translateErr(err.message), 'err');
         btn.disabled = false; btn.textContent = 'Бүртгүүлэх';
-        return;
-      }
-
-      if (data.session) {
-        // Имэйл баталгаажуулалт унтраалттай → шууд нэвтэрсэн
-        window.location.href = 'dashboard.html';
-      } else {
-        // Имэйл баталгаажуулалт асаалттай
-        showMsg('Бүртгэл амжилттай! Имэйл хаягаа шалгаж баталгаажуулсны дараа нэвтэрнэ үү.', 'ok');
-        btn.disabled = false; btn.textContent = 'Бүртгүүлэх';
-        setTimeout(() => switchTab('login'), 2500);
       }
     }
 

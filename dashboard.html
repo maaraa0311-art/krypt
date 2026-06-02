@@ -207,27 +207,22 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="backend.js"></script>
   <script>
     let CURRENT_USER = null;
     let CURRENT_PROFILE = null;
     let CURRENT_VIEW = 'mine';
     let STATUS_FILTER = 'all';
 
-    if (!SUPABASE_READY) {
-      document.getElementById('configWarn').style.display = 'flex';
-      document.getElementById('loadingState').style.display = 'none';
-    } else {
-      init();
-    }
+    init();
 
     async function init() {
-      const { data } = await sb.auth.getSession();
-      if (!data.session) { window.location.href = 'login.html'; return; }
-      CURRENT_USER = data.session.user;
+      CURRENT_USER = await Backend.currentUser();
+      if (!CURRENT_USER) { window.location.href = 'login.html'; return; }
 
       // Профайл татах
-      const { data: profile } = await sb.from('profiles').select('*').eq('id', CURRENT_USER.id).single();
-      CURRENT_PROFILE = profile || { full_name: CURRENT_USER.email, role: 'customer' };
+      CURRENT_PROFILE = await Backend.profile(CURRENT_USER.id)
+        || { full_name: CURRENT_USER.email, role: 'customer' };
 
       // Топбар
       document.getElementById('whoName').textContent = CURRENT_PROFILE.full_name || CURRENT_USER.email;
@@ -237,15 +232,19 @@
         document.getElementById('viewTabs').style.display = 'flex';
       }
 
+      // Demo горимын тэмдэглэгээ
+      if (Backend.mode === 'local') {
+        document.getElementById('pageSub').insertAdjacentHTML('beforeend',
+          ' <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim)">· Demo горим</span>');
+      }
+
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('appWrap').style.display = 'block';
 
       loadOrders();
 
-      // Realtime — статус өөрчлөгдөхөд шууд шинэчлэх
-      sb.channel('orders-rt')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadOrders())
-        .subscribe();
+      // Статус өөрчлөгдөхөд шууд шинэчлэх
+      Backend.onChange(() => loadOrders());
     }
 
     function setView(v) {
@@ -260,10 +259,10 @@
 
     async function loadOrders() {
       const isAll = (CURRENT_VIEW === 'all' && CURRENT_PROFILE.role === 'admin');
-      let q = sb.from('orders').select('*, profiles(full_name, company, phone)').order('created_at', { ascending: false });
-      if (!isAll) q = q.eq('user_id', CURRENT_USER.id);
-      const { data: orders, error } = await q;
-      if (error) { showToast('Уншихад алдаа: ' + error.message, 'error'); return; }
+      let orders;
+      try {
+        orders = await Backend.orders({ all: isAll });
+      } catch (err) { showToast('Уншихад алдаа: ' + err.message, 'error'); return; }
 
       if (isAll) {
         document.getElementById('allCount').textContent = orders.length;
@@ -350,29 +349,33 @@
       const btn = document.getElementById('orderBtn');
       btn.disabled = true; btn.textContent = 'Илгээж байна...';
       const payload = {
-        user_id: CURRENT_USER.id,
         title: document.getElementById('o-title').value.trim(),
         project_type: document.getElementById('o-type').value,
         budget: document.getElementById('o-budget').value || null,
         message: document.getElementById('o-msg').value.trim(),
       };
-      const { error } = await sb.from('orders').insert(payload);
+      try {
+        await Backend.createOrder(payload);
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Захиалга илгээх';
+        showToast('Алдаа: ' + err.message, 'error'); return;
+      }
       btn.disabled = false; btn.textContent = 'Захиалга илгээх';
-      if (error) { showToast('Алдаа: ' + error.message, 'error'); return; }
       document.getElementById('orderForm').reset();
       showToast('Захиалга амжилттай илгээгдлээ!', 'success');
       loadOrders();
     }
 
     async function updateStatus(id, status) {
-      const { error } = await sb.from('orders').update({ status }).eq('id', id);
-      if (error) { showToast('Шинэчлэхэд алдаа: ' + error.message, 'error'); return; }
+      try {
+        await Backend.updateStatus(id, status);
+      } catch (err) { showToast('Шинэчлэхэд алдаа: ' + err.message, 'error'); return; }
       showToast('Статус шинэчлэгдлээ: ' + ORDER_STATUS[status].label, 'success');
       loadOrders();
     }
 
     async function doLogout() {
-      await sb.auth.signOut();
+      await Backend.logout();
       window.location.href = 'login.html';
     }
 
