@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KRYPT — Миний захиалга</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="portal.css">
+  <style>
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,20,.8); backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: 1080px; margin: 0 auto; padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .topbar .who { display: flex; align-items: center; gap: 12px; }
+    .who-name { font-size: 14px; font-weight: 600; }
+    .who-role {
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--bg);
+      background: var(--cyan); padding: 2px 8px; border-radius: 100px; font-weight: 600;
+    }
+    .who-role.admin { background: var(--magenta); }
+
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 36px 24px 80px; position: relative; z-index: 2; }
+
+    .page-head { margin-bottom: 28px; }
+    .page-head h1 { font-family: var(--font-head); font-size: clamp(26px,4vw,38px); font-weight: 700; letter-spacing: -1px; }
+    .page-head p { color: var(--muted); font-size: 15px; margin-top: 4px; }
+
+    .view-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .view-tab {
+      padding: 9px 16px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 100px; font-size: 13.5px; font-weight: 600; color: var(--muted); transition: all .2s;
+    }
+    .view-tab.active { background: var(--panel-2); color: var(--text); border-color: var(--border-2); }
+    .view-tab .count { font-family: var(--font-mono); font-size: 11px; opacity: .7; margin-left: 5px; }
+
+    .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+    .section-title {
+      font-family: var(--font-mono); font-size: 12px; color: var(--cyan);
+      letter-spacing: .5px; margin-bottom: 14px; text-transform: uppercase;
+    }
+
+    /* New order form card */
+    .neworder { padding: 26px 24px; position: sticky; top: 86px; }
+    .neworder h3 { font-family: var(--font-head); font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .neworder .hint { color: var(--dim); font-size: 13px; margin-bottom: 18px; }
+    .neworder .btn { width: 100%; margin-top: 4px; }
+
+    /* Orders list */
+    .orders { display: flex; flex-direction: column; gap: 14px; }
+    .order {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 22px 22px; transition: border-color .2s;
+    }
+    .order:hover { border-color: var(--border-2); }
+    .order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+    .order-title { font-family: var(--font-head); font-size: 17px; font-weight: 600; }
+    .order-type { font-family: var(--font-mono); font-size: 12px; color: var(--cyan); }
+    .order-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); margin-top: 2px; }
+    .order-msg { color: var(--muted); font-size: 14px; margin: 12px 0; line-height: 1.55;
+                 white-space: pre-wrap; word-break: break-word; }
+    .order-cust { font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+                  background: rgba(0,0,0,.25); border: 1px solid var(--border);
+                  border-radius: 8px; padding: 8px 12px; margin: 12px 0; }
+    .order-cust span { color: var(--dim); }
+
+    /* Progress timeline */
+    .timeline { display: flex; align-items: center; margin-top: 16px; }
+    .tl-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+    .tl-dot {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--bg-2); border: 2px solid var(--border-2);
+      display: flex; align-items: center; justify-content: center; z-index: 2;
+      font-size: 11px; color: var(--dim);
+    }
+    .tl-step.done .tl-dot { background: var(--green); border-color: var(--green); color: var(--bg); }
+    .tl-step.current .tl-dot { background: var(--cyan); border-color: var(--cyan); color: var(--bg);
+                               box-shadow: 0 0 0 4px rgba(0,220,255,.18); }
+    .tl-line { position: absolute; top: 11px; left: 50%; width: 100%; height: 2px; background: var(--border-2); z-index: 1; }
+    .tl-step.done .tl-line { background: var(--green); }
+    .tl-step:last-child .tl-line { display: none; }
+    .tl-label { font-family: var(--font-mono); font-size: 10px; color: var(--dim); margin-top: 8px; text-align: center; }
+    .tl-step.current .tl-label, .tl-step.done .tl-label { color: var(--muted); }
+
+    .order-cancelled { opacity: .6; }
+    .order-cancelled .timeline { display: none; }
+
+    /* Admin status control */
+    .status-ctrl { display: flex; gap: 8px; align-items: center; margin-top: 14px;
+                   padding-top: 14px; border-top: 1px solid var(--border); }
+    .status-ctrl select { flex: 1; padding: 9px 12px; background: rgba(0,0,0,.28);
+      border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: var(--font-body); }
+    .status-ctrl select option { background: var(--bg-2); }
+
+    .empty { text-align: center; padding: 56px 24px; color: var(--dim); }
+    .empty svg { margin: 0 auto 16px; opacity: .4; }
+    .empty p { font-size: 15px; }
+
+    .loading { text-align: center; padding: 60px; color: var(--dim); font-family: var(--font-mono); font-size: 14px; }
+
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .filter-chip { padding: 6px 13px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 100px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); transition: all .2s; }
+    .filter-chip.active { background: var(--cyan-soft); border-color: var(--cyan); color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="p-brand">
+        <img src="krypt-logo.png" alt="KRYPT"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex'">
+        <span class="p-brand-fallback" style="display:none">KRYPT</span>
+      </a>
+      <div class="who">
+        <span class="who-name" id="whoName">…</span>
+        <span class="who-role" id="whoRole" style="display:none">customer</span>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Гарах</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" id="appWrap" style="display:none">
+    <div class="page-head">
+      <h1 id="pageTitle">Миний захиалга</h1>
+      <p id="pageSub">Захиалгаа хянаж, явцыг нь ажиглаарай.</p>
+    </div>
+
+    <!-- Admin view tabs (зөвхөн админд) -->
+    <div class="view-tabs" id="viewTabs" style="display:none">
+      <button class="view-tab active" data-view="mine" onclick="setView('mine')">Миний захиалга</button>
+      <button class="view-tab" data-view="all" onclick="setView('all')">Бүх захиалга <span class="count" id="allCount"></span></button>
+    </div>
+
+    <!-- CUSTOMER LAYOUT -->
+    <div class="grid" id="customerGrid">
+      <div>
+        <div class="section-title" id="ordersTitle">Захиалгууд</div>
+        <div class="filter-bar" id="filterBar" style="display:none"></div>
+        <div class="orders" id="ordersList"></div>
+      </div>
+      <div>
+        <div class="card neworder" id="newOrderCard">
+          <h3>Шинэ захиалга</h3>
+          <p class="hint">Юу хийлгэхээ бичээрэй — бид хянаад статусыг шинэчилнэ.</p>
+          <form id="orderForm" onsubmit="createOrder(event)">
+            <div class="field">
+              <label for="o-title">Гарчиг *</label>
+              <input type="text" id="o-title" required placeholder="Жишээ: Ресторан вэбсайт" />
+            </div>
+            <div class="field">
+              <label for="o-type">Төслийн төрөл *</label>
+              <select id="o-type" required>
+                <option value="">Сонгоно уу</option>
+                <option>Танилцуулга сайт</option>
+                <option>Онлайн дэлгүүр</option>
+                <option>Захиалгат вэб апп</option>
+                <option>Брэнд + дизайн</option>
+                <option>Одоо байгаа сайтыг шинэчлэх</option>
+                <option>Бусад</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="o-budget">Төсөв (ойролцоо)</label>
+              <select id="o-budget">
+                <option value="">Сонгоно уу</option>
+                <option>1–3 сая</option>
+                <option>3–6 сая</option>
+                <option>6–10 сая</option>
+                <option>10 сая+</option>
+                <option>Тохиролцох</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="o-msg">Дэлгэрэнгүй *</label>
+              <textarea id="o-msg" required placeholder="Танай бизнес, хүсэж буй функц, хугацаа гэх мэт."></textarea>
+            </div>
+            <button type="submit" class="btn btn-grad" id="orderBtn">Захиалга илгээх</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loadingState">Ачааллаж байна…</div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="config-warn" id="configWarn" style="display:none">
+    <div class="box">
+      <h2>⚙️ Supabase тохируулаагүй байна</h2>
+      <p><code>supabase-config.js</code> файлд түлхүүрүүдээ оруулна уу. Дэлгэрэнгүйг <code>README.md</code>-ээс.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    let CURRENT_USER = null;
+    let CURRENT_PROFILE = null;
+    let CURRENT_VIEW = 'mine';
+    let STATUS_FILTER = 'all';
+
+    if (!SUPABASE_READY) {
+      document.getElementById('configWarn').style.display = 'flex';
+      document.getElementById('loadingState').style.display = 'none';
+    } else {
+      init();
+    }
+
+    async function init() {
+      const { data } = await sb.auth.getSession();
+      if (!data.session) { window.location.href = 'login.html'; return; }
+      CURRENT_USER = data.session.user;
+
+      // Профайл татах
+      const { data: profile } = await sb.from('profiles').select('*').eq('id', CURRENT_USER.id).single();
+      CURRENT_PROFILE = profile || { full_name: CURRENT_USER.email, role: 'customer' };
+
+      // Топбар
+      document.getElementById('whoName').textContent = CURRENT_PROFILE.full_name || CURRENT_USER.email;
+      const roleEl = document.getElementById('whoRole');
+      if (CURRENT_PROFILE.role === 'admin') {
+        roleEl.textContent = 'админ'; roleEl.style.display = 'inline-flex'; roleEl.classList.add('admin');
+        document.getElementById('viewTabs').style.display = 'flex';
+      }
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('appWrap').style.display = 'block';
+
+      loadOrders();
+
+      // Realtime — статус өөрчлөгдөхөд шууд шинэчлэх
+      sb.channel('orders-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadOrders())
+        .subscribe();
+    }
+
+    function setView(v) {
+      CURRENT_VIEW = v; STATUS_FILTER = 'all';
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+      document.getElementById('newOrderCard').parentElement.style.display = (v === 'all') ? 'none' : 'block';
+      document.getElementById('customerGrid').style.gridTemplateColumns = (v === 'all') ? '1fr' : '';
+      document.getElementById('filterBar').style.display = (v === 'all') ? 'flex' : 'none';
+      document.getElementById('ordersTitle').textContent = (v === 'all') ? 'Бүх захиалга' : 'Миний захиалга';
+      loadOrders();
+    }
+
+    async function loadOrders() {
+      const isAll = (CURRENT_VIEW === 'all' && CURRENT_PROFILE.role === 'admin');
+      let q = sb.from('orders').select('*, profiles(full_name, company, phone)').order('created_at', { ascending: false });
+      if (!isAll) q = q.eq('user_id', CURRENT_USER.id);
+      const { data: orders, error } = await q;
+      if (error) { showToast('Уншихад алдаа: ' + error.message, 'error'); return; }
+
+      if (isAll) {
+        document.getElementById('allCount').textContent = orders.length;
+        renderFilterBar(orders);
+      }
+
+      const shown = isAll && STATUS_FILTER !== 'all'
+        ? orders.filter(o => o.status === STATUS_FILTER) : orders;
+
+      renderOrders(shown, isAll);
+    }
+
+    function renderFilterBar(orders) {
+      const counts = { all: orders.length };
+      ORDER_FLOW.concat('cancelled').forEach(s => counts[s] = orders.filter(o => o.status === s).length);
+      const bar = document.getElementById('filterBar');
+      const chips = [['all','Бүгд']].concat(
+        ORDER_FLOW.map(s => [s, ORDER_STATUS[s].label]),
+        [['cancelled', ORDER_STATUS.cancelled.label]]
+      );
+      bar.innerHTML = chips.map(([k,label]) =>
+        `<button class="filter-chip ${STATUS_FILTER===k?'active':''}" onclick="setFilter('${k}')">${label} (${counts[k]||0})</button>`
+      ).join('');
+    }
+    function setFilter(k) { STATUS_FILTER = k; loadOrders(); }
+
+    function renderOrders(orders, isAdmin) {
+      const list = document.getElementById('ordersList');
+      if (!orders.length) {
+        list.innerHTML = `<div class="empty">
+          <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+          <p>${isAdmin ? 'Захиалга алга байна.' : 'Та одоогоор захиалга өгөөгүй байна.<br>Баруун талаас шинэ захиалга үүсгээрэй.'}</p>
+        </div>`;
+        return;
+      }
+      list.innerHTML = orders.map(o => orderCard(o, isAdmin)).join('');
+    }
+
+    function orderCard(o, isAdmin) {
+      const st = ORDER_STATUS[o.status] || ORDER_STATUS.new;
+      const cancelled = o.status === 'cancelled';
+      const date = new Date(o.created_at).toLocaleDateString('mn-MN', { year:'numeric', month:'short', day:'numeric' });
+
+      const timeline = cancelled ? '' : `<div class="timeline">${
+        ORDER_FLOW.map((s, i) => {
+          const cur = ORDER_STATUS[o.status].step;
+          const cls = i < cur ? 'done' : (i === cur ? 'current' : '');
+          const mark = i < cur ? '✓' : (i + 1);
+          return `<div class="tl-step ${cls}"><div class="tl-line"></div><div class="tl-dot">${mark}</div><div class="tl-label">${ORDER_STATUS[s].label}</div></div>`;
+        }).join('')
+      }</div>`;
+
+      const cust = isAdmin && o.profiles ? `<div class="order-cust">
+        <span>Захиалагч:</span> ${esc(o.profiles.full_name || '—')}
+        ${o.profiles.company ? ' · ' + esc(o.profiles.company) : ''}
+        ${o.profiles.phone ? ' · ' + esc(o.profiles.phone) : ''}
+      </div>` : '';
+
+      const ctrl = isAdmin ? `<div class="status-ctrl">
+        <select onchange="updateStatus('${o.id}', this.value)">
+          ${Object.keys(ORDER_STATUS).map(k =>
+            `<option value="${k}" ${k===o.status?'selected':''}>${ORDER_STATUS[k].label}</option>`).join('')}
+        </select>
+      </div>` : '';
+
+      return `<div class="order ${cancelled?'order-cancelled':''}">
+        <div class="order-top">
+          <div>
+            <div class="order-title">${esc(o.title || o.project_type)}</div>
+            <div class="order-type">${esc(o.project_type)}${o.budget ? ' · ' + esc(o.budget) : ''}</div>
+            <div class="order-meta">#${o.id.slice(0,8)} · ${date}</div>
+          </div>
+          <span class="badge" style="color:${st.color}">${st.label}</span>
+        </div>
+        ${cust}
+        ${o.message ? `<div class="order-msg">${esc(o.message)}</div>` : ''}
+        ${timeline}
+        ${ctrl}
+      </div>`;
+    }
+
+    async function createOrder(e) {
+      e.preventDefault();
+      const btn = document.getElementById('orderBtn');
+      btn.disabled = true; btn.textContent = 'Илгээж байна...';
+      const payload = {
+        user_id: CURRENT_USER.id,
+        title: document.getElementById('o-title').value.trim(),
+        project_type: document.getElementById('o-type').value,
+        budget: document.getElementById('o-budget').value || null,
+        message: document.getElementById('o-msg').value.trim(),
+      };
+      const { error } = await sb.from('orders').insert(payload);
+      btn.disabled = false; btn.textContent = 'Захиалга илгээх';
+      if (error) { showToast('Алдаа: ' + error.message, 'error'); return; }
+      document.getElementById('orderForm').reset();
+      showToast('Захиалга амжилттай илгээгдлээ!', 'success');
+      loadOrders();
+    }
+
+    async function updateStatus(id, status) {
+      const { error } = await sb.from('orders').update({ status }).eq('id', id);
+      if (error) { showToast('Шинэчлэхэд алдаа: ' + error.message, 'error'); return; }
+      showToast('Статус шинэчлэгдлээ: ' + ORDER_STATUS[status].label, 'success');
+      loadOrders();
+    }
+
+    async function doLogout() {
+      await sb.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    function showToast(text, type) {
+      const t = document.getElementById('toast');
+      t.textContent = text;
+      t.className = 'toast show ' + (type || 'success');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+  </script>
+</body>
+</html>

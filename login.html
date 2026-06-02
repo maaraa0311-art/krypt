@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KRYPT — Нэвтрэх</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="portal.css">
+  <style>
+    .auth-wrap {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 32px 20px;
+      position: relative; z-index: 2;
+    }
+    .auth-card { width: 100%; max-width: 420px; padding: 36px 32px; }
+    .auth-top { text-align: center; margin-bottom: 26px; }
+    .auth-top .p-brand { margin-bottom: 18px; }
+    .auth-top h1 { font-family: var(--font-head); font-size: 24px; font-weight: 700; letter-spacing: -.5px; }
+    .auth-top p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    .tabs { display: flex; gap: 4px; background: rgba(0,0,0,.3); border: 1px solid var(--border);
+            border-radius: 11px; padding: 4px; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted);
+           font-size: 14px; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .tab.active { background: var(--panel-2); color: var(--text); box-shadow: 0 0 0 1px var(--border); }
+
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .auth-form .btn { width: 100%; margin-top: 6px; }
+
+    .auth-foot { text-align: center; margin-top: 20px; font-size: 13px; color: var(--dim); }
+    .auth-foot a { color: var(--cyan); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .msg { font-family: var(--font-mono); font-size: 12.5px; padding: 10px 12px; border-radius: 9px;
+           margin-bottom: 14px; display: none; }
+    .msg.show { display: block; }
+    .msg.ok  { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3); color: var(--green); }
+    .msg.err { background: rgba(255,77,166,.1); border: 1px solid rgba(255,77,166,.3); color: var(--magenta); }
+    .back-home { position: fixed; top: 22px; left: 24px; z-index: 3; font-family: var(--font-mono);
+                 font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+    .back-home:hover { color: var(--cyan); }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <a href="index.html" class="back-home">← Нүүр хуудас</a>
+
+  <div class="auth-wrap">
+    <div class="card auth-card">
+      <div class="auth-top">
+        <a href="index.html" class="p-brand">
+          <img src="krypt-logo.png" alt="KRYPT"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex'">
+          <span class="p-brand-fallback" style="display:none">KRYPT</span>
+        </a>
+        <h1 id="authTitle">Тавтай морил</h1>
+        <p id="authSub">Захиалгаа хянахын тулд нэвтэрнэ үү</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="login" onclick="switchTab('login')">Нэвтрэх</button>
+        <button class="tab" data-tab="register" onclick="switchTab('register')">Бүртгүүлэх</button>
+      </div>
+
+      <div class="msg" id="msg"></div>
+
+      <!-- LOGIN -->
+      <form class="auth-form active" id="loginForm" onsubmit="doLogin(event)">
+        <div class="field">
+          <label for="li-email">Имэйл</label>
+          <input type="email" id="li-email" required placeholder="name@example.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="li-pass">Нууц үг</label>
+          <input type="password" id="li-pass" required placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-grad" id="loginBtn">Нэвтрэх</button>
+      </form>
+
+      <!-- REGISTER -->
+      <form class="auth-form" id="registerForm" onsubmit="doRegister(event)">
+        <div class="field">
+          <label for="re-name">Бүтэн нэр *</label>
+          <input type="text" id="re-name" required placeholder="Таны нэр" autocomplete="name" />
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="re-phone">Утас</label>
+            <input type="tel" id="re-phone" placeholder="9999-1234" autocomplete="tel" />
+          </div>
+          <div class="field">
+            <label for="re-company">Байгууллага</label>
+            <input type="text" id="re-company" placeholder="(заавал биш)" autocomplete="organization" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="re-email">Имэйл *</label>
+          <input type="email" id="re-email" required placeholder="name@example.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="re-pass">Нууц үг * (хамгийн багадаа 6 тэмдэгт)</label>
+          <input type="password" id="re-pass" required minlength="6" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-grad" id="registerBtn">Бүртгүүлэх</button>
+      </form>
+
+      <div class="auth-foot" id="authFoot">
+        Бүртгэлгүй юу? <a href="#" onclick="switchTab('register'); return false;">Бүртгүүлэх</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Supabase config warning -->
+  <div class="config-warn" id="configWarn" style="display:none">
+    <div class="box">
+      <h2>⚙️ Supabase тохируулаагүй байна</h2>
+      <p><code>supabase-config.js</code> файл дотор <code>SUPABASE_URL</code> болон <code>SUPABASE_ANON_KEY</code>-г өөрийн утгаар солино уу.</p>
+      <p>Дэлгэрэнгүйг <code>README.md</code>-ээс уншина уу.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+    if (!SUPABASE_READY) document.getElementById('configWarn').style.display = 'flex';
+
+    // Хэрэв аль хэдийн нэвтэрсэн бол dashboard руу
+    (async () => {
+      if (!sb) return;
+      const { data } = await sb.auth.getSession();
+      if (data.session) window.location.href = 'dashboard.html';
+    })();
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+      document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+      document.getElementById('registerForm').classList.toggle('active', tab === 'register');
+      document.getElementById('authTitle').textContent = tab === 'login' ? 'Тавтай морил' : 'Бүртгэл үүсгэх';
+      document.getElementById('authSub').textContent = tab === 'login'
+        ? 'Захиалгаа хянахын тулд нэвтэрнэ үү'
+        : 'Хэдхэн секундэд бүртгүүлээрэй';
+      document.getElementById('authFoot').innerHTML = tab === 'login'
+        ? 'Бүртгэлгүй юу? <a href="#" onclick="switchTab(\'register\'); return false;">Бүртгүүлэх</a>'
+        : 'Бүртгэлтэй юу? <a href="#" onclick="switchTab(\'login\'); return false;">Нэвтрэх</a>';
+      hideMsg();
+    }
+
+    function showMsg(text, type) {
+      const m = document.getElementById('msg');
+      m.textContent = text;
+      m.className = 'msg show ' + type;
+    }
+    function hideMsg() { document.getElementById('msg').className = 'msg'; }
+
+    function showToast(text, type) {
+      const t = document.getElementById('toast');
+      t.textContent = text;
+      t.className = 'toast show ' + (type || 'success');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      if (!sb) return;
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'Нэвтэрч байна...';
+      hideMsg();
+      const email = document.getElementById('li-email').value.trim();
+      const password = document.getElementById('li-pass').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        showMsg(translateErr(error.message), 'err');
+        btn.disabled = false; btn.textContent = 'Нэвтрэх';
+        return;
+      }
+      window.location.href = 'dashboard.html';
+    }
+
+    async function doRegister(e) {
+      e.preventDefault();
+      if (!sb) return;
+      const btn = document.getElementById('registerBtn');
+      btn.disabled = true; btn.textContent = 'Бүртгэж байна...';
+      hideMsg();
+      const full_name = document.getElementById('re-name').value.trim();
+      const phone     = document.getElementById('re-phone').value.trim();
+      const company   = document.getElementById('re-company').value.trim();
+      const email     = document.getElementById('re-email').value.trim();
+      const password  = document.getElementById('re-pass').value;
+
+      const { data, error } = await sb.auth.signUp({
+        email, password,
+        options: { data: { full_name, phone, company } }
+      });
+
+      if (error) {
+        showMsg(translateErr(error.message), 'err');
+        btn.disabled = false; btn.textContent = 'Бүртгүүлэх';
+        return;
+      }
+
+      if (data.session) {
+        // Имэйл баталгаажуулалт унтраалттай → шууд нэвтэрсэн
+        window.location.href = 'dashboard.html';
+      } else {
+        // Имэйл баталгаажуулалт асаалттай
+        showMsg('Бүртгэл амжилттай! Имэйл хаягаа шалгаж баталгаажуулсны дараа нэвтэрнэ үү.', 'ok');
+        btn.disabled = false; btn.textContent = 'Бүртгүүлэх';
+        setTimeout(() => switchTab('login'), 2500);
+      }
+    }
+
+    function translateErr(m) {
+      if (/Invalid login credentials/i.test(m)) return 'Имэйл эсвэл нууц үг буруу байна.';
+      if (/already registered|already been registered/i.test(m)) return 'Энэ имэйл аль хэдийн бүртгэлтэй байна.';
+      if (/Password should be at least/i.test(m)) return 'Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.';
+      if (/Email not confirmed/i.test(m)) return 'Имэйлээ эхлээд баталгаажуулна уу.';
+      if (/rate limit|too many/i.test(m)) return 'Хэт олон оролдлого. Түр хүлээгээд дахин оролдоно уу.';
+      return m;
+    }
+  </script>
+</body>
+</html>
